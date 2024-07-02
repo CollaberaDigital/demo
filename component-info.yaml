@@ -1,7 +1,7 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: ${{ parameters.vpcName }}
+  name: genaidemo
   annotations:
     github.com/project-slug: CollaberaDigital/GenBI-VPC # Change to your GitHub repo containing Terraform code
     backstage.io/techdocs-ref: dir:.
