@@ -1,8 +1,8 @@
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: create-vpc-and-subnets
-  title: Create VPC and Subnets
+  name: Demo
+  title: Demo
   description: Create AWS VPC and associated subnets using Terraform and GitHub Actions.
   tags: ['aws', 'terraform', 'github-actions']
 spec:
