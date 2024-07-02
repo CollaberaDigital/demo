@@ -1,0 +1,128 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: create-vpc-and-subnets
+  title: Create VPC and Subnets
+  description: Create AWS VPC and associated subnets using Terraform and GitHub Actions.
+  tags: ['aws', 'terraform', 'github-actions']
+spec:
+  owner: guest
+  type: service
+
+  parameters:
+    - title: VPC Configuration
+      required:
+        - vpcName
+        - vpcCidrBlock
+        - awsRegion
+      properties:
+        vpcName:
+          type: string
+          description: Name of the VPC to create
+        vpcCidrBlock:
+          type: string
+          title: CIDR Block for VPC
+          description: CIDR block for the VPC
+          enum:
+            - 10.0.0.0/16
+            - 172.16.0.0/16
+            - 192.168.0.0/16
+        awsRegion:
+          type: string
+          description: AWS region where resources will be created (e.g., us-east-1)
+          default: us-east-1  # Default value for region
+
+    - title: Subnet Configuration
+      required:
+        - subnetCidrBlock
+        - availabilityZone
+      properties:
+        subnetCidrBlock:
+          type: string
+          title: CIDR Block for Subnet
+          description: CIDR block for the subnet
+          enum:
+            - 10.0.1.0/24
+            - 10.0.2.0/24
+            - 172.16.1.0/24
+        availabilityZone:
+          type: string
+          description: AWS Availability Zone for the subnet (e.g., us-east-1a)
+          default: us-east-1a  # Default value for availability zone
+
+    - title: Choose Repository Location
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          type: string
+          description: GitHub repository URL where Terraform files reside
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+
+    - title: Action
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          description: What action do you want to perform? Apply or Destroy
+          enum:
+            - apply
+            - destroy
+          default: apply  # Default action is apply
+
+  steps:
+    - id: fetch-template
+      name: Fetch Template Details
+      action: fetch:template
+      input:
+        url: ./content  # Location of the content directory where catalog-info.yaml file is present for the template
+        values:
+          vpcName: ${{ parameters.vpcName }}
+          vpcCidrBlock: ${{ parameters.vpcCidrBlock }}
+          subnetCidrBlock: ${{ parameters.subnetCidrBlock }}
+          availabilityZone: ${{ parameters.availabilityZone }}
+          awsRegion: ${{ parameters.awsRegion }}
+
+    - id: publish-to-github
+      name: Publish to GitHub
+      action: publish:github
+      input:
+        allowedHosts: ['github.com']
+        description: Publishes details for VPC and Subnets creation using Backstage.
+        repoUrl: ${{ parameters.repoUrl }}
+        repoVisibility: public
+
+    - id: trigger-github-action
+      name: Trigger GitHub Action
+      action: github:actions:dispatch
+      input:
+        workflowId: instance.yml  # ID of GitHub action Workflow in your repository
+        repoUrl: 'github.com?repo=GenBI-VPC&owner=CollaberaDigital'
+        branchOrTagName: master
+        workflowInputs:
+          vpcName: ${{ parameters.vpcName }}
+          vpcCidrBlock: ${{ parameters.vpcCidrBlock }}
+          subnetCidrBlock: ${{ parameters.subnetCidrBlock }}
+          availabilityZone: ${{ parameters.availabilityZone }}
+          awsRegion: ${{ parameters.awsRegion }}
+          action: ${{ parameters.action }}
+        token: ${{ secrets.GH_PAT }}
+
+    - id: register
+      name: Register
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
+        catalogInfoPath: '/component-info.yaml'
+
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish-to-github.output.remoteUrl }}
+      - title: Open in Catalog
+        icon: catalog
+        entityRef: ${{ steps.register-component.output.entityRef }}
